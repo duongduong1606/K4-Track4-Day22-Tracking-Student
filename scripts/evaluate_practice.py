@@ -19,7 +19,9 @@ Ví dụ:
 from __future__ import annotations
 
 import argparse
+import configparser
 import json
+import re
 import shutil
 import subprocess
 import sys
@@ -32,14 +34,14 @@ def _patch_numpy_aliases() -> None:
     """TrackEval còn gọi np.float / np.int (đã bỏ từ NumPy 1.24)."""
     import numpy as np
 
-    if not hasattr(np, "float"):
+    if "float" not in np.__dict__:
         np.float = float  # type: ignore[attr-defined]
-    if not hasattr(np, "int"):
+    if "int" not in np.__dict__:
         np.int = int  # type: ignore[attr-defined]
 
 
 def _load_eval_config(lab_data_root: Path) -> dict:
-    """Đọc cấu hình chấm đi kèm nhãn video luyện.
+    """Đọc cấu hình chấm hoặc suy ra benchmark từ ``seqinfo.ini``.
 
     Args:
         lab_data_root: Thư mục lab_data giảng viên phát.
@@ -48,15 +50,27 @@ def _load_eval_config(lab_data_root: Path) -> dict:
         Dict có khóa ``benchmark`` và có thể có ``split``.
 
     Raises:
-        FileNotFoundError: Khi thiếu ``video_1/eval_config.json``.
+        FileNotFoundError: Khi thiếu cả ``eval_config.json`` và ``seqinfo.ini``.
+        ValueError: Khi tên sequence trong ``seqinfo.ini`` không đúng định dạng.
     """
     config_path = lab_data_root / PRACTICE_VIDEO / "eval_config.json"
-    if not config_path.exists():
+    if config_path.exists():
+        return json.loads(config_path.read_text(encoding="utf-8"))
+
+    seqinfo_path = lab_data_root / PRACTICE_VIDEO / "seqinfo.ini"
+    if not seqinfo_path.exists():
         raise FileNotFoundError(
-            f"Không thấy {config_path}. Dùng đúng gói lab_data giảng viên phát "
-            "(file này đi kèm nhãn của video luyện)."
+            f"Không thấy {config_path} hoặc {seqinfo_path}. "
+            "Dùng đúng gói lab_data giảng viên phát."
         )
-    return json.loads(config_path.read_text())
+
+    parser = configparser.ConfigParser()
+    parser.read(seqinfo_path, encoding="utf-8")
+    sequence_name = parser.get("Sequence", "name", fallback="")
+    match = re.match(r"^(.+?)-\d+(?:-|$)", sequence_name)
+    if match is None:
+        raise ValueError(f"Không suy ra được benchmark từ tên sequence: {sequence_name!r}")
+    return {"benchmark": match.group(1), "split": "train"}
 
 
 def stage(trackeval_root: Path, lab_data_root: Path, submission: Path, run_name: str, benchmark: str) -> None:

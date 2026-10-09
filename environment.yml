@@ -2,13 +2,14 @@ name: cv_robotics_lab21
 channels:
   - conda-forge
 dependencies:
-  - python=3.11
+  - python=3.10
   - pip
+  - setuptools<81
   - pip:
       - ultralytics>=8.4
       - boxmot==10.0.42
-      - opencv-python>=4.8
-      - numpy
+      - opencv-python>=4.8,<4.12
+      - numpy==1.23.1
       - pyyaml
       - lap>=0.4.0
       - scipy

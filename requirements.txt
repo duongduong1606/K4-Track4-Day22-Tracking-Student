@@ -1,10 +1,11 @@
 # Cài trong env cv_robotics_lab21: pip install -r requirements.txt
 # TrackEval cài riêng bằng git clone (xem HUONG_DAN.md, bước C).
 
+setuptools<81
 ultralytics>=8.4
 boxmot==10.0.42
-opencv-python>=4.8
-numpy
+opencv-python>=4.8,<4.12
+numpy==1.23.1
 pyyaml
 lap>=0.4.0
 scipy
